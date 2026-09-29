@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 额度剩余</title>
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --panel: #ffffff;
+    --ink: #1d2230;
+    --muted: #8a8e9a;
+    --line: #ebe9e3;
+    --track: #ecebe6;
+    --ok: #2f8f6b;
+    --warn: #d99a1e;
+    --danger: #d2463a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161c;
+      --panel: #1c1f27;
+      --ink: #eceef3;
+      --muted: #858a97;
+      --line: #282c36;
+      --track: #2a2e38;
+      --ok: #45b58b;
+      --warn: #e8b04a;
+      --danger: #f0675b;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+    padding: 48px 20px;
+  }
+  main { max-width: 720px; margin: 0 auto; }
+  header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; }
+  h1 { font-size: 22px; font-weight: 700; }
+  #fetched { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .row {
+    display: grid; grid-template-columns: 112px minmax(0, 1fr) minmax(0, 1fr); align-items: center;
+    gap: 32px; padding: 18px 24px; border-top: 1px solid var(--line);
+  }
+  .row:first-child { border-top: 0; }
+  .row.head { padding-top: 12px; padding-bottom: 10px; font-size: 12.5px; color: var(--muted); }
+  .name { font-size: 15px; font-weight: 600; }
+  .age { display: block; margin-top: 2px; font-size: 11.5px; font-weight: 400; color: var(--muted); }
+  .row.stale .age { color: var(--warn); font-weight: 500; }
+  .row.stale .cell { opacity: .55; }
+
+  .cell { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; column-gap: 12px; align-items: center; }
+  .pct { font-size: 22px; line-height: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pct small { font-size: 13px; margin-left: 1px; color: var(--muted); font-weight: 600; }
+  .when { display: block; margin-top: 1px; font-size: 11.5px; line-height: 14px; color: var(--muted); opacity: .8; white-space: nowrap; }
+  .track { height: 8px; border-radius: 999px; background: var(--track); overflow: hidden; }
+  .side { font-size: 13px; line-height: 16px; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; min-width: 44px; white-space: nowrap; }
+  .cell.none .pct, .cell.none .side { color: var(--muted); }
+  .fill { height: 100%; border-radius: 999px; background: var(--ok); }
+  .warn .pct { color: var(--warn); } .warn .fill { background: var(--warn); }
+  .danger .pct { color: var(--danger); } .danger .fill { background: var(--danger); }
+  .error { grid-column: 2 / 4; font-size: 13.5px; color: var(--muted); }
+
+  .banner { display: none; margin-bottom: 14px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--danger); color: var(--danger); font-size: 13.5px; }
+
+  /* Popup mode (?popup): used by the Hammerspoon hotkey window */
+  body.popup { padding: 0; background: transparent; }
+  body.popup main { max-width: none; min-height: 100vh; background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 16px 16px 14px; }
+  body.popup header { margin-bottom: 12px; }
+  body.popup h1 { font-size: 18px; }
+  body.popup .row { padding: 14px 20px; gap: 28px; grid-template-columns: 104px minmax(0, 1fr) minmax(0, 1fr); }
+  body.popup .row.head { padding: 10px 20px 8px; }
+
+  @media (max-width: 560px) {
+    .row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 20px; padding: 16px 18px; align-items: start; }
+    .row .name { grid-column: 1 / 3; }
+    .row.head { display: none; }
+    .cell::before { content: attr(data-label); grid-column: 1 / 4; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+    .error { grid-column: 1 / 3; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>AI 额度剩余</h1>
+    <span><span id="fetched" title="每 30 秒自动刷新；数据来自本机，使用工具时才会更新">—</span></span>
+  </header>
+  <div class="banner" id="banner"></div>
+  <section class="panel" id="panel"></section>
+</main>
+
+<script>
+  const REFRESH_MS = 30000;
+  const STALE_SECONDS = 3600;   // dim the row and highlight its age
+  const FRESH_SECONDS = 600;    // younger data is treated as current: no age shown
+  const WINDOWS = [["5h", "5 小时"], ["week", "每周"]];
+  let latest = null;
+
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function when(epoch) {
+    const d = new Date(epoch * 1000);
+    const hm = d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
+    return d.toDateString() === new Date().toDateString() ? hm : `${d.getMonth() + 1}/${d.getDate()}`;
+  }
+
+  // Beside the bar: 5h window -> reset clock time, weekly window -> reset date.
+  // Stacked under the date (weekly only): time left until the reset.
+  function resetParts(key, resetsAt) {
+    const date = new Date(resetsAt * 1000);
+    if (key === "5h") {
+      return { side: date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }), below: "" };
+    }
+    const s = Math.max(0, resetsAt - Date.now() / 1000);
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600);
+    return { side: `${date.getMonth() + 1}月${date.getDate()}日`, below: d > 0 ? `${d}天${h}小时` : `${h}小时` };
+  }
+
+  function ago(seconds) {
+    const m = Math.floor(seconds / 60), h = Math.floor(seconds / 3600), d = Math.floor(seconds / 86400);
+    return d > 0 ? `${d} 天前` : h > 0 ? `${h} 小时前` : `${m} 分钟前`;
+  }
+
+  function cell(key, label, w) {
+    if (!w || w.used_percent == null) {
+      return `<div class="cell none" data-label="${label}"><span class="pct">—</span><div class="track"></div><span class="side">无</span></div>`;
+    }
+    const left = Math.max(0, Math.min(100, 100 - w.used_percent));
+    const level = left <= 5 ? "danger" : left <= 20 ? "warn" : "";
+    const parts = w.reset ? { side: "待刷新", below: "" } : w.resets_at ? resetParts(key, w.resets_at) : { side: "", below: "" };
+    return `<div class="cell ${level}" data-label="${label}">
+      <span class="pct">${Math.round(left)}<small>%</small></span>
+      <div class="track"><div class="fill" style="width:${left}%"></div></div>
+      <span class="side">${parts.side}${parts.below ? `<span class="when">${parts.below}</span>` : ""}</span>
+    </div>`;
+  }
+
+  function row(acc, now) {
+    if (!acc.ok) {
+      return `<div class="row"><div class="name">${esc(acc.name)}</div><div class="error">${esc(acc.error || "暂无数据")}</div></div>`;
+    }
+    const age = now - acc.updated_at;
+    const stale = age > STALE_SECONDS;
+    return `<div class="row${stale ? " stale" : ""}" title="数据时间 ${esc(new Date(acc.updated_at * 1000).toLocaleString("zh-CN"))}">
+      <div class="name">${esc(acc.name)}${age >= FRESH_SECONDS ? `<span class="age">${ago(age)}</span>` : ""}</div>
+      ${WINDOWS.map(([key, label]) => cell(key, label, acc.windows?.[key])).join("")}
+    </div>`;
+  }
+
+  function render() {
+    if (!latest) return;
+    const now = Date.now() / 1000;
+    const head = `<div class="row head"><div></div>${WINDOWS.map(([, label]) => `<div>${label}</div>`).join("")}</div>`;
+    document.getElementById("panel").innerHTML = head + latest.accounts.map((a) => row(a, now)).join("");
+  }
+
+  async function refresh() {
+    const banner = document.getElementById("banner");
+    try {
+      const res = await fetch("/api/quota", { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.status);
+      latest = data;
+      banner.style.display = "none";
+      document.getElementById("fetched").textContent = `更新时间 ${when(Date.now() / 1000)}`;
+      render();
+    } catch (err) {
+      banner.textContent = `读取失败：${err.message}。确认本地服务在运行。`;
+      banner.style.display = "block";
+    }
+  }
+
+  if (new URLSearchParams(location.search).has("popup")) document.body.classList.add("popup");
+  refresh();
+  setInterval(refresh, REFRESH_MS);
+</script>
+</body>
+</html>
