@@ -2,6 +2,8 @@
 
 本机 AI 额度看板：同时查看 Claude Code 与两个 Codex 账号的 5 小时 / 每周剩余额度。
 
+![AI 额度看板弹窗效果](docs/screenshot.png)
+
 - 只读本机数据，不调用任何接口，不读取登录凭据，不消耗额度。
 - 本地服务只监听 `127.0.0.1`，不对外开放。
 - 数据在你使用工具时刷新，显示的是“最后一次使用时”的额度；每个账号标注数据时间。
@@ -89,7 +91,8 @@ quota-dashboard/
 ├── launchd/              # launchd 配置模板
 ├── install.sh            # 安装并启动常驻服务
 ├── uninstall.sh          # 停止并移除常驻服务
-└── tests/                # 自动化测试
+├── tests/                # 自动化测试
+└── docs/screenshot.png   # 最终效果图
 ```
 
 ## 安装与使用
