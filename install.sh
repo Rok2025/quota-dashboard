@@ -4,10 +4,16 @@ set -euo pipefail
 
 LABEL="com.freeman.quota-dashboard"
 PROJECT="$(cd "$(dirname "$0")" && pwd)"
-PYTHON="${QUOTA_PYTHON:-/opt/homebrew/bin/python3}"
+PYTHON="${QUOTA_PYTHON:-}"
+if [ -z "$PYTHON" ]; then
+  # Stable entry points survive upgrades; take the first available.
+  for candidate in /opt/homebrew/bin/python3 /usr/local/bin/python3 /usr/bin/python3; do
+    if [ -x "$candidate" ]; then PYTHON="$candidate"; break; fi
+  done
+fi
 LOG_DIR="${QUOTA_STATE_DIR:-$HOME/.local/state/quota}"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
-PORT="${QUOTA_PORT:-8765}"
+PORT="${QUOTA_PORT:-8766}"
 
 if [ ! -x "$PYTHON" ]; then
   echo "找不到 Python：$PYTHON（可用 QUOTA_PYTHON 指定）" >&2

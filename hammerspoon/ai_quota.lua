@@ -1,9 +1,9 @@
--- AI 额度弹窗：Cmd+Shift+0 打开 / 关闭，Esc 或点击弹窗外部关闭；命令行可用 open -g hammerspoon://ai-quota。
--- 页面来自 quota-dashboard 本地服务（http://127.0.0.1:8765/?popup）。
+-- AI 额度弹窗：Cmd+Shift+6 打开 / 关闭，Esc 或点击弹窗外部关闭；命令行可用 open -g hammerspoon://ai-quota。
+-- 页面来自 quota-dashboard 本地服务（http://127.0.0.1:8766/?popup）。
 
 local M = {}
 
-local URL = "http://127.0.0.1:8765/?popup"
+local URL = "http://127.0.0.1:8766/?popup"
 local WIDTH, HEIGHT = 680, 310
 
 local view = nil
@@ -11,7 +11,7 @@ local escKey = nil
 local clickWatcher = nil
 
 local function serviceUp()
-  local status = hs.http.get("http://127.0.0.1:8765/api/quota", nil)
+  local status = hs.http.get("http://127.0.0.1:8766/api/quota", nil)
   return status == 200
 end
 
@@ -89,7 +89,11 @@ clickWatcher = hs.eventtap.new({
   hs.eventtap.event.types.leftMouseDown,
   hs.eventtap.event.types.rightMouseDown,
 }, outsideClick)
-hs.hotkey.bind({ "cmd", "shift" }, "0", M.toggle)
+if hs.hotkey.assignable({ "cmd", "shift" }, "6") then
+  M.hotkey = hs.hotkey.bind({ "cmd", "shift" }, "6", M.toggle)
+else
+  hs.alert.show("⇧⌘6 已被占用，AI 额度快捷键未注册；仍可使用 open -g hammerspoon://ai-quota。")
+end
 -- Also callable from a shell: open -g hammerspoon://ai-quota
 hs.urlevent.bind("ai-quota", function() M.toggle() end)
 

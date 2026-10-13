@@ -12,8 +12,8 @@
 
 | 方式 | 入口 | 说明 |
 |---|---|---|
-| 快捷键弹窗 | `Cmd+Shift+0` | 屏幕中央弹出；再按一次、`Esc` 或点击外部关闭 |
-| 网页 | `http://127.0.0.1:8765` | 每 30 秒自动刷新 |
+| 快捷键弹窗 | `Cmd+Shift+6` | 屏幕中央弹出；再按一次、`Esc` 或点击外部关闭 |
+| 网页 | `http://127.0.0.1:8766` | 每 30 秒自动刷新 |
 | 命令行 | `ai-quota`（`--json` 输出原始数据） | 直接读本机文件，不依赖本地服务 |
 
 三种方式共用 `collect.py` 的采集结果，数字一致。
@@ -55,7 +55,7 @@ Codex 的 `primary` / `secondary` 不固定对应 5 小时或每周，按 `windo
 - **S3 数据时间**：每个账号标注数据时间，过旧时调淡提示。
 - **S4 自动刷新**：页面每 30 秒重新拉取。
 - **S5 自动化测试**：采集解析、窗口归类、重置判断、时间格式、终端表格、中转脚本透传。
-- **S6 快捷键弹窗**：Hammerspoon `Cmd+Shift+0` 弹出，`Esc` / 点击外部关闭。
+- **S6 快捷键弹窗**：Hammerspoon `Cmd+Shift+6` 弹出，`Esc` / 点击外部关闭。
 - **S7 命令行查看**：`ai-quota` 输出剩余额度表格。
 
 ### Could（暂不实现）
@@ -117,7 +117,7 @@ python3 -m unittest discover -s tests
 ### 快捷键弹窗（Hammerspoon）
 
 - 安装：`ln -s "$PWD/hammerspoon/ai_quota.lua" ~/.hammerspoon/ai_quota.lua`，在 `~/.hammerspoon/init.lua` 加入 `require("ai_quota")`，重新加载 Hammerspoon。
-- 使用：`Cmd+Shift+0` 打开 / 关闭；`Esc` 或点击弹窗外部关闭（点击关闭需要 Hammerspoon 的辅助功能权限）；命令行可用 `open -g hammerspoon://ai-quota`。
+- 使用：`Cmd+Shift+6` 打开 / 关闭；`Esc` 或点击弹窗外部关闭（点击关闭需要 Hammerspoon 的辅助功能权限）；命令行可用 `open -g hammerspoon://ai-quota`。
 - 弹窗读取本地服务的 `/?popup` 页面，需要常驻服务在运行；出错时写入 `~/.local/state/quota/hammerspoon.log`。
 - 移除：删掉 `init.lua` 中的 `require("ai_quota")` 与 `~/.hammerspoon/ai_quota.lua` 链接，然后重新加载 Hammerspoon。
 
@@ -143,5 +143,5 @@ python3 -m unittest discover -s tests
 | `QUOTA_VIBE_ISLAND_RL` | `~/.vibe-island/cache/rl.json` | Vibe Island 缓存的 Claude 额度文件 |
 | `QUOTA_STATE_DIR` | `~/.local/state/quota` | 状态文件与日志目录 |
 | `QUOTA_STATUSLINE_DOWNSTREAM` | `~/.vibe-island/bin/vibe-island-statusline` | 中转脚本的下游状态栏命令 |
-| `QUOTA_PORT` | `8765` | 本地服务端口 |
+| `QUOTA_PORT` | `8766` | 本地服务端口 |
 | `QUOTA_PYTHON` | `/opt/homebrew/bin/python3` | `install.sh` 使用的 Python |

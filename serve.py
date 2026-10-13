@@ -17,7 +17,7 @@ from pathlib import Path
 import collect
 
 HOST = "127.0.0.1"
-PORT = int(os.environ.get("QUOTA_PORT", "8765"))
+PORT = int(os.environ.get("QUOTA_PORT", "8766"))
 WEB_DIR = Path(__file__).resolve().parent / "web"
 CACHE_SECONDS = 5
 
