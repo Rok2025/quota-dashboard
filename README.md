@@ -74,6 +74,7 @@ Codex 的 `primary` / `secondary` 不固定对应 5 小时或每周，按 `windo
 
 | 日期 | 变更 | 原因 |
 |---|---|---|
+| 2026-10-08 | AI 额度弹窗快捷键由 `Cmd+Shift+0` 改为 `Cmd+Shift+6` | 本人统一调整快捷键，`Cmd+Shift+0` 用于笔记工作台 |
 | 2026-09-29 | 汇总由“launchd 每分钟生成 `quota.json`”改为“请求时实时汇总” | 单次采集约 0.06 秒，少一个定时任务，数据也更新 |
 | 2026-09-29 | Claude 数据改为读取 Vibe Island 缓存，不改 `statusLine.command` | Vibe Island 已缓存 `rate_limits`，且其脚本要求不改该配置；中转脚本保留为备用 |
 | 2026-09-29 | 新增快捷键弹窗与 `ai-quota` 命令 | 不打开浏览器也能一眼查看 |
